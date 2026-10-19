@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AIPPT · 需求录入器</title>
+<style>
+  :root{
+    color-scheme:light;
+    --ink:#111111; --ink2:#3a3a3a; --grey:#666666; --grey2:#999999;
+    --line:rgba(17,17,17,.10); --line2:rgba(17,17,17,.06);
+    --bg:#f4f4f3; --card:rgba(255,255,255,.72);
+    --ac:#0a0a0a; --ac2:#1a1a1a; --acS:rgba(10,10,10,.06); --acL:rgba(10,10,10,.24);
+    --acOn:#ffffff;
+    --warn:#C0392B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro SC","PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;
+    position:relative; overflow-x:hidden;
+  }
+  body::after{
+    content:""; position:fixed; left:50%; bottom:-46vw; transform:translateX(-50%);
+    width:132vw; height:92vw; border-radius:50%;
+    background:radial-gradient(circle at 50% 35%, rgba(10,10,10,.08), rgba(120,120,120,.06) 42%, transparent 70%);
+    filter:blur(60px); pointer-events:none; z-index:0;
+  }
+  .wrap{position:relative; z-index:1; max-width:1020px; margin:0 auto; padding:34px 22px 120px}
+
+  .top{
+    position:sticky; top:14px; z-index:30; margin-bottom:22px;
+    display:flex; align-items:center; gap:12px;
+    padding:13px 18px; border-radius:20px;
+    background:rgba(255,255,255,.66); backdrop-filter:blur(18px) saturate(1.6);
+    -webkit-backdrop-filter:blur(18px) saturate(1.6);
+    border:1px solid var(--line); box-shadow:0 6px 22px rgba(17,17,17,.06);
+  }
+  .top h1{font-size:16px;font-weight:650;letter-spacing:-.01em;white-space:nowrap}
+  .top .sub{font-size:11.5px;color:var(--grey2);white-space:nowrap}
+  .spacer{flex:1}
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12.5px;font-weight:600;color:var(--ink2);
+    padding:8px 14px;border-radius:12px;border:1px solid var(--line);
+    background:rgba(255,255,255,.7); cursor:pointer; white-space:nowrap;
+    transition:.16s;
+  }
+  .btn:hover{border-color:var(--acL); color:var(--ac)}
+  .btn.pri{background:var(--ac); border-color:var(--ac); color:var(--acOn)}
+  .btn.pri:hover{background:var(--ac2); color:var(--acOn)}
+  .btn.gh{background:transparent}
+  .btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  .panel{
+    background:var(--card); backdrop-filter:blur(14px) saturate(1.4);
+    -webkit-backdrop-filter:blur(14px) saturate(1.4);
+    border:1px solid var(--line); border-radius:22px;
+    box-shadow:0 2px 14px rgba(17,17,17,.045);
+    padding:20px 22px; margin-bottom:16px;
+  }
+  .ph{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+  .pi{width:28px;height:28px;border-radius:9px;background:var(--acS);color:var(--ac);
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .pi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .pt{font-size:15px;font-weight:650}
+  .pd{font-size:11.5px;color:var(--grey2);margin-left:auto;text-align:right;line-height:1.4}
+
+  label.fl{display:block;font-size:11px;font-weight:650;letter-spacing:.06em;color:var(--grey);
+    text-transform:uppercase;margin-bottom:6px}
+  textarea,input[type=text]{
+    width:100%; font-family:inherit; font-size:13.5px; line-height:1.65; color:var(--ink);
+    background:rgba(255,255,255,.78); border:1px solid var(--line);
+    border-radius:14px; padding:11px 13px; resize:vertical; transition:.16s;
+  }
+  textarea:focus,input[type=text]:focus{outline:none;border-color:var(--acL);background:#fff;
+    box-shadow:0 0 0 3px var(--acS)}
+  textarea::placeholder,input::placeholder{color:var(--grey2)}
+  select{width:100%;font-family:inherit;font-size:13.5px;line-height:1.65;color:var(--ink);
+    background:rgba(255,255,255,.78);border:1px solid var(--line);border-radius:14px;padding:11px 13px;transition:.16s;appearance:none;-webkit-appearance:none}
+  select:focus{outline:none;border-color:var(--acL);background:#fff;box-shadow:0 0 0 3px var(--acS)}
+  .color-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .color-field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:110px}
+  .color-field .cl{font-size:11px;font-weight:600;color:var(--grey)}
+  .color-field input[type=color]{width:100%;height:40px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:3px;cursor:pointer}
+  .color-field .hex{font-size:10.5px;color:var(--grey2);font-family:ui-monospace,monospace}
+  .hint{font-size:11.5px;color:var(--grey2);margin-top:6px;line-height:1.5}
+
+  /* 参考 skill 快捷标签 */
+  .chips{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 16px}
+  .chip{font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:20px;cursor:pointer;
+    border:1px solid var(--line);background:rgba(255,255,255,.6);color:var(--grey);transition:.16s;user-select:none}
+  .chip:hover{border-color:var(--acL);color:var(--ac)}
+
+  .pg{
+    background:var(--card); backdrop-filter:blur(14px) saturate(1.4);
+    -webkit-backdrop-filter:blur(14px) saturate(1.4);
+    border:1px solid var(--line); border-radius:22px;
+    box-shadow:0 2px 14px rgba(17,17,17,.045);
+    padding:18px 20px 20px; margin-bottom:14px; position:relative;
+  }
+  .pg.drag{border-color:var(--ac); box-shadow:0 0 0 3px var(--acS)}
+  .pg-top{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .pg-no{
+    width:78px; flex:0 0 auto; text-align:center; font-weight:700; font-size:14px;
+    color:var(--ac); background:var(--acS); border:1px solid var(--acL); border-radius:11px;
+    padding:8px 6px;
+  }
+  .pg-no:focus{background:#fff}
+  .pg-title{flex:1; min-width:180px; font-weight:600; font-size:14.5px;
+    border:none; background:transparent; border-bottom:1px solid var(--line2); border-radius:0; padding:8px 2px}
+  .pg-title:focus{box-shadow:none;border-bottom-color:var(--ac);background:transparent}
+  .pg-act{display:flex;gap:5px;flex:0 0 auto}
+  .ib{width:28px;height:28px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.7);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--grey);transition:.16s}
+  .ib:hover{color:var(--ac);border-color:var(--acL)}
+  .ib.del:hover{color:#C0392B;border-color:rgba(192,57,43,.3)}
+  .ib svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:13px}
+  .tg{font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:20px;cursor:pointer;
+    border:1px solid var(--line);background:rgba(255,255,255,.6);color:var(--grey);transition:.16s;user-select:none}
+  .tg:hover{border-color:var(--acL)}
+  .tg.on{background:var(--ac);border-color:var(--ac);color:var(--acOn)}
+  .tg.on.w{background:var(--warn);border-color:var(--warn);color:#fff}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+
+  .shots{margin-top:13px}
+  .drop{
+    border:1.5px dashed var(--line); border-radius:16px; background:rgba(255,255,255,.45);
+    padding:16px; text-align:center; cursor:pointer; transition:.16s;
+  }
+  .drop:hover,.drop.hot{border-color:var(--ac); background:var(--acS)}
+  .drop .dt{font-size:12.5px;font-weight:600;color:var(--ink2)}
+  .drop .ds{font-size:11px;color:var(--grey2);margin-top:3px}
+  .drop svg{width:20px;height:20px;fill:none;stroke:var(--ac);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;margin-bottom:5px}
+  .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px;margin-top:10px}
+  .th{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#fff}
+  .th img{width:100%;display:block;cursor:zoom-in}
+  .th .x{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:7px;border:none;
+    background:rgba(17,17,17,.6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+  .th .x svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+  .th .sz{position:absolute;left:5px;bottom:5px;font-size:9.5px;color:#fff;background:rgba(17,17,17,.55);
+    padding:2px 6px;border-radius:5px;backdrop-filter:blur(6px)}
+
+  .empty{text-align:center;padding:40px 20px;color:var(--grey2);font-size:13px}
+  .addbar{display:flex;justify-content:center;gap:10px;margin:20px 0 8px}
+  .foot{text-align:center;font-size:11.5px;color:var(--grey2);margin-top:26px;line-height:1.7}
+
+  #toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(14px);
+    background:rgba(17,17,17,.9);color:#fff;font-size:13px;font-weight:600;
+    padding:11px 20px;border-radius:14px;backdrop-filter:blur(10px);
+    opacity:0;pointer-events:none;transition:.22s;z-index:99}
+  #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  #lb{position:fixed;inset:0;background:rgba(16,16,16,.86);backdrop-filter:blur(8px);
+    display:none;align-items:center;justify-content:center;z-index:100;padding:30px;cursor:zoom-out}
+  #lb.on{display:flex}
+  #lb img{max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+
+  @media (max-width:760px){
+    .two{grid-template-columns:1fr}
+    .wrap{padding:20px 14px 100px}
+    .top{flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════ 我（Hermes）读取的就是下面两个块 ══════════ -->
+<script id="SPEC-DATA" type="application/json">{"visual":"","skill":"","pages":[]}</script>
+<script id="SPEC-TEXT" type="text/plain">（尚未填写）</script>
+
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <h1>AIPPT · 需求录入器</h1>
+      <div class="sub">填完点「保存」→ 覆盖写回本文件 → 告诉我文件名，我读数据生成 PPT</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn gh" id="btnExport" title="另存一份带数据的 HTML">
+      <svg viewBox="0 0 20 20"><path d="M10 3v10M6 9l4 4 4-4M3.5 16.5h13"/></svg>另存一份
+    </button>
+    <button class="btn pri" id="btnSave">
+      <svg viewBox="0 0 20 20"><path d="M4 3.5h9l3 3V16a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 4 16z"/><path d="M6.5 3.5v4h6v-4M6.5 16.5v-5h7v5"/></svg>保存
+    </button>
+  </div>
+
+  <!-- 全局设置 -->
+  <div class="panel">
+    <div class="ph">
+      <div class="pi"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"/><path d="M10 6.5v4l2.5 1.5"/></svg></div>
+      <div>
+        <div class="pt">整份 PPT 的全局设置</div>
+        <div class="hint" style="margin-top:1px">选一个生成 Skill，再写视觉要求，对所有页生效</div>
+      </div>
+    </div>
+
+    <label class="fl">参考使用的 Skill（可选）</label>
+    <input type="text" id="skill" placeholder="例如 guizang-ppt-skill 瑞士风 / dashi-ppt / frontend-slides / 可编辑 PPTX">
+    <div class="chips" id="skillChips"></div>
+
+    <label class="fl">视觉风格 · 30 种</label>
+    <select id="style"><option value="">（选一个主风格）</option><optgroup label="专业常用">
+<option value="商务极简">商务极简</option>
+<option value="科技未来">科技未来</option>
+<option value="高级杂志">高级杂志</option>
+<option value="教育清晰">教育清晰</option>
+</optgroup>
+<optgroup label="设计趋势">
+<option value="Bento 信息卡片">Bento 信息卡片</option>
+<option value="暗色科技">暗色科技</option>
+<option value="瑞士国际主义">瑞士国际主义</option>
+<option value="Soft Brutalism">Soft Brutalism</option>
+<option value="玻璃拟态">玻璃拟态</option>
+<option value="超大字排版">超大字排版</option>
+<option value="新拟态金属">新拟态金属</option>
+<option value="极简数据叙事">极简数据叙事</option>
+<option value="粗野网格">粗野网格</option>
+<option value="极光渐变">极光渐变</option>
+<option value="未来产品发布">未来产品发布</option>
+<option value="低多边形空间">低多边形空间</option>
+<option value="液态渐变">液态渐变</option>
+<option value="新复古像素">新复古像素</option>
+<option value="拟物纸张">拟物纸张</option>
+<option value="网格排版">网格排版</option>
+<option value="宇宙深空">宇宙深空</option>
+<option value="极简留白">极简留白</option>
+<option value="编辑式版面">编辑式版面</option>
+<option value="光影层叠">光影层叠</option>
+<option value="赛博界面">赛博界面</option>
+<option value="数字杂志">数字杂志</option>
+<option value="涂鸦实验">涂鸦实验</option>
+<option value="克制奢华">克制奢华</option>
+<option value="单色高对比">单色高对比</option>
+<option value="摄影拼贴">摄影拼贴</option>
+<option value="现代海报">现代海报</option>
+<option value="透明亚克力">透明亚克力</option>
+<option value="未来工业">未来工业</option>
+<option value="自然科技">自然科技</option>
+</optgroup></select>
+    <div class="hint" style="margin-top:6px">完整清单见官方 style-library（30 种，分专业常用/设计趋势）</div>
+
+    <label class="fl" style="margin-top:14px">叙事结构 · 30 种</label>
+    <select id="narrative"><option value="">（选一个主结构）</option><optgroup label="决策与提案">
+<option value="结论先行">结论先行</option>
+<option value="问题—洞察—方案">问题—洞察—方案</option>
+<option value="金字塔表达">金字塔表达</option>
+<option value="战略地图">战略地图</option>
+<option value="提案说服结构">提案说服结构</option>
+<option value="多方案比较">多方案比较</option>
+<option value="行动路线图">行动路线图</option>
+</optgroup>
+<optgroup label="汇报与复盘">
+<option value="数据证据链">数据证据链</option>
+<option value="前后对比">前后对比</option>
+<option value="案例拆解">案例拆解</option>
+<option value="时间线叙事">时间线叙事</option>
+<option value="研究报告结构">研究报告结构</option>
+<option value="实验过程">实验过程</option>
+<option value="趋势演变">趋势演变</option>
+<option value="成长复盘">成长复盘</option>
+</optgroup>
+<optgroup label="产品与用户">
+<option value="用户旅程">用户旅程</option>
+<option value="场景化讲述">场景化讲述</option>
+<option value="产品发布节奏">产品发布节奏</option>
+<option value="品牌故事">品牌故事</option>
+<option value="服务蓝图">服务蓝图</option>
+</optgroup>
+<optgroup label="教学与解释">
+<option value="一页一观点">一页一观点</option>
+<option value="问答推进">问答推进</option>
+<option value="概念图解">概念图解</option>
+<option value="课程式讲解">课程式讲解</option>
+<option value="清单式说明">清单式说明</option>
+<option value="空间导览">空间导览</option>
+</optgroup>
+<optgroup label="故事与编辑表达">
+<option value="故事递进">故事递进</option>
+<option value="人物线索">人物线索</option>
+<option value="视觉散文">视觉散文</option>
+<option value="纪录片式">纪录片式</option>
+<option value="杂志专题">杂志专题</option>
+</optgroup></select>
+    <div class="hint" style="margin-top:6px">按演示目标选，不必一次看完 30 个</div>
+
+    <label class="fl" style="margin-top:14px">三色色盘 · 主色 / 辅助色 / 点缀色</label>
+    <div class="color-row" style="margin-top:8px">
+      <div class="color-field"><span class="cl">主色</span><input type="color" id="cPrimary" value="#0a0a0a"><span class="hex" id="hPrimary">#0a0a0a</span></div>
+      <div class="color-field"><span class="cl">辅助色</span><input type="color" id="cSecondary" value="#f4f4f3"><span class="hex" id="hSecondary">#f4f4f3</span></div>
+      <div class="color-field"><span class="cl">点缀色</span><input type="color" id="cAccent" value="#2563eb"><span class="hex" id="hAccent">#2563eb</span></div>
+    </div>
+
+<label class="fl">整份 PPT 的视觉要求</label>
+    <textarea id="visual" rows="7" placeholder="例：&#10;· 整体黑白灰 ＋ 一个强调色，强调色只做点缀不做底色&#10;· 每个小节当成一页 16:9 的 PPT 来排，章名放右上角浅色小字&#10;· 痛点一律「名词短语：客观陈述」，原话放右栏并排&#10;· 能画就不要写，数字用大号字，不堆成段落&#10;· 不要出现：口语、第二人称、对仗式金句"></textarea>
+    <div class="hint" id="vcount" style="margin-top:6px">0 字</div>
+  </div>
+
+  <!-- 页列表 -->
+  <div id="pages"></div>
+
+  <div class="addbar">
+    <button class="btn pri" id="btnAdd">
+      <svg viewBox="0 0 20 20"><path d="M10 4v12M4 10h12"/></svg>添加一页
+    </button>
+    <button class="btn gh" id="btnAdd5">+5 页</button>
+  </div>
+
+  <div class="foot">
+    自动暂存在本机浏览器，刷新不丢；<b>点「保存」才会写回文件</b>。<br>
+    截图支持：在页内截图区直接 <b>⌘V 粘贴</b>、拖拽图片进来、或点击选文件。<br>
+    填完保存后，回来告诉我文件名（如「AIPPT需求录入器.html」），我读 <b>SPEC-DATA</b> 生成 PPT。<br>
+    视觉风格 / 叙事结构清单参考 AiPPT RedSkill。
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="lb"><img alt=""></div>
+
+<script>
+(function(){
+  "use strict";
+  const KEY = 'aippt-spec-v1';
+  const TAGS = ['保留','精简','合并','删除','新增','待定'];
+  const SKILLS = ['guizang 瑞士风','guizang 杂志风','dashi-ppt','frontend-slides','可编辑 PPTX','html-ppt-skill'];
+
+  let state = { visual:'', skill:'', style:'', narrative:'', colors:{p:'#0a0a0a',s:'#f4f4f3',a:'#2563eb'}, pages:[] };
+  let fileHandle = null;
+  let activeDrop = null;
+
+  function load(){
+    let fromFile = null;
+    try{
+      const raw = document.getElementById('SPEC-DATA').textContent.trim();
+      const o = JSON.parse(raw);
+      if (o && (o.visual || o.skill || (o.pages && o.pages.length))) fromFile = o;
+    }catch(e){}
+    let fromLS = null;
+    try{
+      const raw = localStorage.getItem(KEY);
+      if (raw) { const o = JSON.parse(raw); if (o) fromLS = o; }
+    }catch(e){}
+    const score = o => o ? (o.visual||'').length + (o.skill||'').length + JSON.stringify(o.pages||[]).length : -1;
+    state = (score(fromLS) > score(fromFile)) ? (fromLS||state) : (fromFile||state);
+    if (!Array.isArray(state.pages)) state.pages = [];
+    if (typeof state.visual !== 'string') state.visual = '';
+    if (typeof state.skill !== 'string') state.skill = '';
+    if (typeof state.style !== 'string') state.style = '';
+    if (typeof state.narrative !== 'string') state.narrative = '';
+    if (!state.colors || typeof state.colors !== 'object') state.colors = {p:'#0a0a0a',s:'#f4f4f3',a:'#2563eb'};
+  }
+
+  function persist(){
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){
+      toast('本机暂存已满，请尽快点「保存」写回文件');
+    }
+  }
+
+  function el(tag, cls, html){ const n=document.createElement(tag); if(cls)n.className=cls; if(html!=null)n.innerHTML=html; return n; }
+  let tmr=null;
+  function toast(msg){
+    const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
+    clearTimeout(tmr); tmr=setTimeout(()=>t.classList.remove('on'), 2400);
+  }
+  function kb(n){ return n>1024*1024 ? (n/1024/1024).toFixed(1)+' MB' : Math.round(n/1024)+' KB'; }
+
+  function newPage(){ return { no:'', title:'', text:'', desc:'', tag:'', imgs:[] }; }
+
+  function shrink(file){
+    return new Promise((res,rej)=>{
+      const fr = new FileReader();
+      fr.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 1600;
+          let w = img.width, h = img.height;
+          if (w > MAX){ h = Math.round(h * MAX / w); w = MAX; }
+          const c = document.createElement('canvas'); c.width=w; c.height=h;
+          const ctx = c.getContext('2d');
+          ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h);
+          ctx.drawImage(img,0,0,w,h);
+          res(c.toDataURL('image/jpeg', 0.88));
+        };
+        img.onerror = rej;
+        img.src = fr.result;
+      };
+      fr.onerror = rej;
+      fr.readAsDataURL(file);
+    });
+  }
+
+  async function addImgs(idx, files){
+    const list = [...files].filter(f => f && f.type && f.type.startsWith('image/'));
+    if (!list.length) return;
+    for (const f of list){
+      try{
+        const d = await shrink(f);
+        state.pages[idx].imgs.push(d);
+      }catch(e){ toast('有一张图没读进来'); }
+    }
+    persist(); render();
+    toast('已加入 ' + list.length + ' 张截图');
+  }
+
+  function renderSkillChips(){
+    const host = document.getElementById('skillChips');
+    host.innerHTML = '';
+    SKILLS.forEach(s => {
+      const b = el('span','chip', s);
+      b.onclick = () => { state.skill = s; document.getElementById('skill').value = s; persist(); };
+      host.appendChild(b);
+    });
+  }
+
+  function render(){
+    const host = document.getElementById('pages');
+    host.innerHTML = '';
+    document.getElementById('visual').value = state.visual;
+    document.getElementById('skill').value = state.skill;
+    document.getElementById('style').value = state.style;
+    document.getElementById('narrative').value = state.narrative;
+    document.getElementById('cPrimary').value = state.colors.p;
+    document.getElementById('cSecondary').value = state.colors.s;
+    document.getElementById('cAccent').value = state.colors.a;
+    document.getElementById('hPrimary').textContent = state.colors.p;
+    document.getElementById('hSecondary').textContent = state.colors.s;
+    document.getElementById('hAccent').textContent = state.colors.a;
+    document.getElementById('vcount').textContent = state.visual.length + ' 字';
+    renderSkillChips();
+
+    if (!state.pages.length){
+      host.appendChild(el('div','panel empty','还没有页面。点下面的「添加一页」开始，页码自己填（例如 1、2.1、A-3）。'));
+      return;
+    }
+
+    state.pages.forEach((p, i) => {
+      const card = el('div','pg');
+
+      const top = el('div','pg-top');
+      const no = el('input','pg-no'); no.type='text'; no.value=p.no; no.placeholder='页码';
+      no.oninput = e => { p.no = e.target.value; persist(); };
+      const ti = el('input','pg-title'); ti.type='text'; ti.value=p.title; ti.placeholder='这一页叫什么（可留空）';
+      ti.oninput = e => { p.title = e.target.value; persist(); };
+      const act = el('div','pg-act');
+      act.appendChild(iconBtn('up','上移','M10 15V5M5.5 9.5 10 5l4.5 4.5', ()=>move(i,-1)));
+      act.appendChild(iconBtn('dn','下移','M10 5v10M5.5 10.5 10 15l4.5-4.5', ()=>move(i, 1)));
+      act.appendChild(iconBtn('cp','复制这页','M7 7h8v8H7zM5 13V5h8', ()=>dup(i)));
+      act.appendChild(iconBtn('del','删除这页','M5 6h10M8 6V4.5h4V6M6.5 6l.6 9.5h5.8L13.5 6', ()=>del(i)));
+      top.append(no, ti, act);
+      card.appendChild(top);
+
+      const tags = el('div','tags');
+      TAGS.forEach(t => {
+        const b = el('span','tg' + (p.tag===t ? ' on' + (t==='删除'?' w':'') : ''), t);
+        b.onclick = () => { p.tag = (p.tag===t ? '' : t); persist(); render(); };
+        tags.appendChild(b);
+      });
+      card.appendChild(tags);
+
+      const two = el('div','two');
+      const c1 = el('div');
+      c1.appendChild(el('label','fl','这页内容 · 第一行写一句话结论'));
+      const ta1 = el('textarea'); ta1.rows=8; ta1.value=p.text;
+      ta1.placeholder='第一行：这一页的一句话结论（要让人记住的那句）\n后面：支撑要点、数据、用户原话……\n按最终想印上去的样子写，我照搬不改写';
+      ta1.oninput = e => { p.text = e.target.value; persist(); };
+      c1.appendChild(ta1);
+      const c2 = el('div');
+      c2.appendChild(el('label','fl','这页视觉 · 想做成什么样'));
+      const ta2 = el('textarea'); ta2.rows=8; ta2.value=p.desc;
+      ta2.placeholder='说感觉、说结构、说版式都行：\n「一个大数字压住，下面三条小字」\n「三卡横排，第一张深色突出」\n「左右对比，中间一条竖线」';
+      ta2.oninput = e => { p.desc = e.target.value; persist(); };
+      c2.appendChild(ta2);
+      two.append(c1,c2);
+      card.appendChild(two);
+
+      const shots = el('div','shots');
+      shots.appendChild(el('label','fl','参考截图 · ⌘V 粘贴 / 拖进来 / 点击选文件'));
+      const drop = el('div','drop',
+        '<svg viewBox="0 0 20 20"><path d="M10 13.5V4M6 8l4-4 4 4"/><path d="M3.5 13.5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2"/></svg>'
+        + '<div class="dt">点这里选图，或直接 ⌘V 粘贴</div>'
+        + '<div class="ds">先点一下这块再粘贴；也可以把图片文件拖进来</div>');
+      drop.tabIndex = 0;
+      drop.onclick = () => {
+        const f = document.createElement('input'); f.type='file'; f.accept='image/*'; f.multiple=true;
+        f.onchange = () => addImgs(i, f.files);
+        f.click();
+      };
+      drop.onfocus = () => { activeDrop = i; drop.classList.add('hot'); };
+      drop.onblur  = () => { drop.classList.remove('hot'); };
+      drop.addEventListener('mouseenter', () => { activeDrop = i; });
+      ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => {
+        e.preventDefault(); e.stopPropagation(); drop.classList.add('hot'); card.classList.add('drag');
+      }));
+      ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => {
+        e.preventDefault(); e.stopPropagation(); drop.classList.remove('hot'); card.classList.remove('drag');
+      }));
+      drop.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files) addImgs(i, e.dataTransfer.files); });
+      shots.appendChild(drop);
+
+      if (p.imgs.length){
+        const th = el('div','thumbs');
+        p.imgs.forEach((d, j) => {
+          const box = el('div','th');
+          const im = el('img'); im.src = d; im.alt = '参考截图';
+          im.onclick = () => { const lb=document.getElementById('lb'); lb.querySelector('img').src=d; lb.classList.add('on'); };
+          const x = el('button','x','<svg viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15"/></svg>');
+          x.title = '删除这张';
+          x.onclick = ev => { ev.stopPropagation(); p.imgs.splice(j,1); persist(); render(); };
+          const sz = el('div','sz', kb(d.length * 0.75));
+          box.append(im, x, sz);
+          th.appendChild(box);
+        });
+        shots.appendChild(th);
+      }
+      card.appendChild(shots);
+      host.appendChild(card);
+    });
+  }
+
+  function iconBtn(kind, title, path, fn){
+    const b = el('button','ib' + (kind==='del' ? ' del' : ''), '<svg viewBox="0 0 20 20"><path d="'+path+'"/></svg>');
+    b.title = title; b.onclick = fn; return b;
+  }
+  function move(i, d){
+    const j = i + d; if (j < 0 || j >= state.pages.length) return;
+    const [x] = state.pages.splice(i,1); state.pages.splice(j,0,x); persist(); render();
+  }
+  function dup(i){
+    const c = JSON.parse(JSON.stringify(state.pages[i]));
+    state.pages.splice(i+1, 0, c); persist(); render();
+  }
+  function del(i){
+    if (!confirm('删除这一页？')) return;
+    state.pages.splice(i,1); persist(); render();
+  }
+
+  document.addEventListener('paste', e => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    const files = [];
+    for (const it of items) if (it.kind === 'file' && it.type.startsWith('image/')) files.push(it.getAsFile());
+    if (!files.length) return;
+    let idx = activeDrop;
+    if (idx == null || !state.pages[idx]) {
+      if (!state.pages.length){ state.pages.push(newPage()); persist(); render(); }
+      idx = state.pages.length - 1;
+    }
+    e.preventDefault();
+    addImgs(idx, files);
+  });
+
+  function textMirror(){
+    const L = [];
+    L.push('AIPPT · 需求录入　导出时间：' + new Date().toLocaleString('zh-CN'));
+    L.push('参考 Skill：' + (state.skill || '（未选）'));
+    L.push('视觉风格：' + (state.style || '（未选）'));
+    L.push('叙事结构：' + (state.narrative || '（未选）'));
+    L.push('三色色盘：' + state.colors.p + ' / ' + state.colors.s + ' / ' + state.colors.a);
+    L.push('页数：' + state.pages.length + '　截图总数：' + state.pages.reduce((s,p)=>s+p.imgs.length,0));
+    L.push('');
+    L.push('【整份 PPT 的视觉要求】');
+    L.push(state.visual.trim() || '（未填）');
+    L.push('');
+    state.pages.forEach((p, i) => {
+      L.push('──────── 第 ' + (i+1) + ' 条　页码：' + (p.no || '未填')
+             + (p.title ? '　' + p.title : '')
+             + (p.tag ? '　[' + p.tag + ']' : '')
+             + '　截图 ' + p.imgs.length + ' 张 ────────');
+      L.push('〔这页内容〕');
+      L.push((p.text || '（未填）').trim());
+      L.push('〔这页视觉〕');
+      L.push((p.desc || '（未填）').trim());
+      L.push('');
+    });
+    return L.join('\n');
+  }
+
+  function buildDoc(){
+    const clone = document.documentElement.cloneNode(true);
+    const pg = clone.querySelector('#pages'); if (pg) pg.innerHTML = '';
+    const lb = clone.querySelector('#lb img'); if (lb) lb.removeAttribute('src');
+    const tv = clone.querySelector('#visual'); if (tv) tv.textContent = '';
+    const ts = clone.querySelector('#skill'); if (ts) ts.removeAttribute('value');
+    const tt = clone.querySelector('#toast'); if (tt) { tt.textContent=''; tt.className=''; }
+    clone.querySelector('#SPEC-DATA').textContent =
+      JSON.stringify(state).replace(/</g, '\\u003c');
+    clone.querySelector('#SPEC-TEXT').textContent =
+      textMirror().replace(/<\/(script)/gi, '<\\/$1');
+    return '<!DOCTYPE html>\n' + clone.outerHTML;
+  }
+
+  async function save(){
+    const html = buildDoc();
+    const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    if (window.showSaveFilePicker){
+      try{
+        if (!fileHandle){
+          fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'AIPPT需求录入器.html',
+            types: [{description:'HTML', accept:{'text/html':['.html']}}]
+          });
+        }
+        const w = await fileHandle.createWritable();
+        await w.write(blob); await w.close();
+        toast('已保存（' + kb(blob.size) + '）—— 告诉我文件名我就能读');
+        return;
+      }catch(err){
+        if (err && err.name === 'AbortError') return;
+        fileHandle = null;
+      }
+    }
+    download(blob);
+  }
+  function download(blob){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'AIPPT需求录入器_已填写.html';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+    toast('已下载到「下载」文件夹（' + kb(blob.size) + '）');
+  }
+
+  document.getElementById('visual').addEventListener('input', e => {
+    state.visual = e.target.value;
+    document.getElementById('vcount').textContent = state.visual.length + ' 字';
+    persist();
+  });
+  document.getElementById('skill').addEventListener('input', e => {
+    state.skill = e.target.value;
+    persist();
+  });
+  document.getElementById('style').addEventListener('change', e => { state.style = e.target.value; persist(); });
+  document.getElementById('narrative').addEventListener('change', e => { state.narrative = e.target.value; persist(); });
+  function syncColors(){
+    state.colors = { p: document.getElementById('cPrimary').value, s: document.getElementById('cSecondary').value, a: document.getElementById('cAccent').value };
+    document.getElementById('hPrimary').textContent = state.colors.p;
+    document.getElementById('hSecondary').textContent = state.colors.s;
+    document.getElementById('hAccent').textContent = state.colors.a;
+    persist();
+  }
+  ['cPrimary','cSecondary','cAccent'].forEach(id => document.getElementById(id).addEventListener('input', syncColors));
+  document.getElementById('btnAdd').onclick = () => {
+    state.pages.push(newPage()); persist(); render();
+    window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'});
+  };
+  document.getElementById('btnAdd5').onclick = () => {
+    for (let i=0;i<5;i++) state.pages.push(newPage());
+    persist(); render();
+  };
+  document.getElementById('btnSave').onclick = save;
+  document.getElementById('btnExport').onclick = () => download(new Blob([buildDoc()], {type:'text/html;charset=utf-8'}));
+  document.getElementById('lb').onclick = function(){ this.classList.remove('on'); };
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.getElementById('lb').classList.remove('on');
+    if ((e.metaKey || e.ctrlKey) && e.key === 's'){ e.preventDefault(); save(); }
+  });
+  window.addEventListener('beforeunload', persist);
+
+  load(); render();
+})();
+</script>
+</body>
+</html>
